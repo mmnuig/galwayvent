@@ -1,0 +1,3 @@
+x-window-manager &
+cd /home/pi/VentGUI
+python3 VentGUI.py
