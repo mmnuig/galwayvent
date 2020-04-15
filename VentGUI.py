@@ -14,10 +14,13 @@ import math
 import serial
 
 # Some important overall settings
-REALSENSORS=False     # if True, read data from sensors; if false, generate random numbers
-interval = 50         # update interval 50ms
-graphPoints = 100     # how many points to display on the graph
-movingWindowSize = 20 # Size of the window for estimation of peak and mean values
+REALSENSORS=False      # if True, read data from sensors; if false, generate random numbers
+interval = 50          # update interval 50ms
+graphPoints = 100      # how many points to display on the graph
+movingWindowPpeak = 20 # Size of the window for estimation of Ppeak
+movingWindowPEEP = 5   # size of moving window for PEEP display
+movingWindowVte = 5    # size of moving window for Vte display
+
 ADDRESS = 0x01        # Address for sensor comms
 
 
@@ -26,6 +29,10 @@ def floatToStr(value, numDigits=2):
     # if we want to round to 0 digits, convert to an int, otherwise we get trailing ".0" which we don't want
     v = int(value) if (numDigits==0) else round(value, numDigits)
     return str(v)
+
+# Simple average function that returns 0 if array is empty
+def avg(arr):
+    return 0 if (len(arr) == 0) else sum(arr)/len(arr)
 
 
 if REALSENSORS:
@@ -222,10 +229,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.vteTimer = 0
         self.insp = bool(False)
         self.Exp = bool(False)
-        self.posPeaks = [0] * movingWindowSize
-        self.negPeaks = [0] * movingWindowSize
-        self.PEEP = [0] * 5
-        self.expV = [0] * 5
+        self.posPeaks = []
+        self.PEEP = []
+        self.expV = []
         self.xSim = 0
 
         # Connect up signals to slots
@@ -246,6 +252,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.flowGraphWidget.setEnabled(False) # Disable all interaction - want output-only graph display
         self.flowGraphWidget.showGrid(x=False, y=True) # Horizontal grid lines including at y=0
 
+
     def updateData(self):
         if REALSENSORS:
             # Real mode, not simulation mode: read data from sensors
@@ -259,18 +266,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self.xSim = 0 if (self.xSim >= 99) else self.xSim + 1 # wrap around 100 -> 0
 
         # PEEP estimation
-        if(flow>=0 and self.prevFlow<0): # Detect sero crossing: negative to positive change
+        if(flow>=0 and self.prevFlow<0): # Detect zero crossing: negative to positive change
             if(self.vteTimer>20): # Ignore if a cycle is too small
-               self.PEEP = self.PEEP[1:]
-               self.PEEP.append(self.prevPress) # PEEP
-               self.expV = self.expV[1:]
-               self.expV.append(2286*(self.instV/(self.vteTimer*50))) # tidal volume
+               if len(self.PEEP) == movingWindowPEEP:
+                   self.PEEP = self.PEEP[1:] # disard old value from moving window
+               self.PEEP.append(self.prevPress) # add new value
+               if len(self.expV) == movingWindowVte:
+                   self.expV = self.expV[1:] # disard old value from moving window
+               self.expV.append(2286*(self.instV/(self.vteTimer*50))) # add new tidal volume
+
             self.instV = 0
             self.vteTimer = 0
             self.insp = True
             self.Exp = False
 
-        if(flow<0 and self.prevFlow>=0): # Detect sero crossing: Postive to negative change
+        if(flow<0 and self.prevFlow>=0): # Detect zero crossing: Postive to negative change
             self.insp = False
             self.Exp = True
 
@@ -285,16 +295,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.newPress.emit(pressure)
         self.newFlow.emit(flow)
 
-        # Record last 20 peak pressure values for moving average
-        self.posPeaks = self.posPeaks[1:]
+        # Record last [movingWindowPpeak] peak pressure values for moving average
+        if len(self.posPeaks) == movingWindowPpeak:
+            self.posPeaks = self.posPeaks[1:]
         self.posPeaks.append(max(self.pressData))
 
         # Emit messages to update stats on every 5th call (250ms)
         self.timeCount += 1
         if(self.timeCount>5):
-           self.newPpeak.emit(sum(self.posPeaks)/movingWindowSize)
-           self.newVte.emit(sum(self.expV)/5)
-           self.newPEEP.emit(sum(self.PEEP)/5)
+           self.newPpeak.emit(avg(self.posPeaks))
+           self.newVte.emit(avg(self.expV))
+           self.newPEEP.emit(avg(self.PEEP))
            self.timeCount = 0
 
     # Update the pressure graph (slot for handling newPress signal)
