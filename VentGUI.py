@@ -2,8 +2,9 @@
 # Developed for the Galway Vent Share project: www.galwayventshare.com
 
 
-from PyQt5 import QtWidgets, QtCore, uic
+from PyQt5 import Qt, QtWidgets, QtCore, uic
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QPalette
 
 import pyqtgraph as pg
 import sys  # We need sys so that we can pass argv to QApplication
@@ -12,6 +13,9 @@ from numpy import array
 import math
 
 import serial
+
+
+# =========== Overall settings and utility functions =============
 
 # Some important overall settings
 REALSENSORS=False      # if True, read data from sensors; if false, generate random numbers
@@ -35,6 +39,9 @@ def avg(arr):
     return 0 if (len(arr) == 0) else sum(arr)/len(arr)
 
 
+
+# =========== Code for communication with sensors =============
+
 if REALSENSORS:
     # The serial port access crashes in Windows - don't access it if simulating data
     ser = serial.Serial(
@@ -48,7 +55,6 @@ if REALSENSORS:
              rtscts=0,                   #disable RTS/CTS flow control
          )
 
-# Define routines for communication with sensor
 
 def get_sw_version(address): # Get software version of cable
     command = bytearray(([address] + [0x01] + [0x00] + [0xB2]))
@@ -189,6 +195,8 @@ def force_temperature_update(address): # Force update of temperature on board ca
     return temp.hex()
 
 
+# ============== Main Vent GUI Window =================
+
 class MainWindow(QtWidgets.QMainWindow):
     # Define signals that are emitted when there is new data from the sensors
     newPress = pyqtSignal(float)
@@ -196,6 +204,10 @@ class MainWindow(QtWidgets.QMainWindow):
     newPpeak = pyqtSignal(float)
     newVte = pyqtSignal(float)
     newPEEP = pyqtSignal(float)
+
+    # Colour settings
+    alarmStyle = ".QFrame {background-color: #ff0000; border: 4px solid white;} .QLabel {color: white;}"
+    normalStyle = ".QFrame {background-color: #2a66ff;} .QLabel {color: white;}"
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -220,6 +232,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setupPressurePlot(self.timeData, self.pressData)
         self.setupFlowPlot(self.timeData, self.flowData)
 
+        # Alarm thresholds
+        self.pPeakMaxAlarm = 35
+        self.VteMaxAlarm = 500
+        self.VteMinAlarm = 350
+        self.PEEPMaxAlarm = 15
+
         # Some additional variables to calculate stats
         # Note - moved some of these from being class variables to instance variables
         self.timeCount = 0
@@ -234,13 +252,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.expV = []
         self.xSim = 0
 
-        # Connect up signals to slots
+        # Connect up signals to slots - custom signals
         self.newPress.connect(self.plotPressure)
         self.newFlow.connect(self.plotFlow)
         self.newPpeak.connect(self.setPpeak)
         self.newVte.connect(self.setVte)
         self.newPEEP.connect(self.setPEEP)
 
+        # Connect up signals to slots - standard UI signals
+        self.btnAlarmSet.clicked.connect(self.showAlarmSettings)
 
     def setupPressurePlot(self, hour, press):
         self.pressureLine = self.pressGraphWidget.plot(hour, press, pen=self.linePen)
@@ -326,11 +346,16 @@ class MainWindow(QtWidgets.QMainWindow):
     @pyqtSlot(float)
     def setPpeak(self, value):
         self.valPpeak.setText(floatToStr(value,1))
+        if value > self.pPeakMaxAlarm:
+            self.framePpeak.setStyleSheet(MainWindow.alarmStyle)
+        else:
+            self.framePpeak.setStyleSheet(MainWindow.normalStyle)
+
 
     # Change Vte value (slot for handling newVte signal)
     @pyqtSlot(float)
     def setVte(self, value):
-        self.valVte.setText(floatToStr(value,1))
+        self.valVte.setText(floatToStr(value,0))
 
     # Change PEEP value (slot for handling newPEEP signal)
     @pyqtSlot(float)
@@ -341,6 +366,55 @@ class MainWindow(QtWidgets.QMainWindow):
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Escape:
             self.close()
+
+    # Open the alarm settings screen
+    def showAlarmSettings(self):
+        alarmSettings = AlarmSettings(self)
+        alarmSettings.exec_()
+
+
+
+# ============== Alarm Settings Window =================
+
+class AlarmSettings(QtWidgets.QDialog):
+    def __init__(self, parent):
+        super().__init__()
+        self.mainWin = parent
+        #Load the UI Page
+        uic.loadUi('alarmsettings.ui', self)
+        #self.showFullScreen(); # TODO make full screen
+
+        # join sliders to spinboxes - connect up signals to slots
+        self.pPeakSlider.valueChanged.connect(self.pPeakSpinBox.setValue)
+        self.pPeakSpinBox.valueChanged.connect(self.pPeakSlider.setValue)
+
+        # set initial values based on main window values
+        self.pPeakSpinBox.setValue(self.mainWin.pPeakMaxAlarm)
+
+        # Configure progress bars and join sensor values to them
+        self.pPeakCurrent.setStyleSheet("QProgressBar { border: 0px solid grey; border-radius: 0px; text-align: center; } QProgressBar::chunk {background-color: #00ff00; height: 1px;}")
+        self.pPeakCurrent.setMinimum(0);
+        self.pPeakCurrent.setMaximum(45);
+        self.mainWin.newPpeak.connect(self.pPeakCurrent.setValue)
+
+
+        # When the OK button is pressed, set the alarm limits for the main window
+        self.buttonBox.accepted.connect(self.updateAlarms)
+
+    def __del__(self):
+        # Need to disconnect slots connected to signals before closing the dialog
+        print("Deleting alarm dialog object")
+        self.mainWin.newPpeak.disconnect(self.pPeakCurrent.setValue)
+
+    # Update alarms in main window object (slot for when "OK" button is pressed)
+    @pyqtSlot()
+    def updateAlarms(self):
+        print("Alarm OK pressed")
+        self.mainWin.pPeakMaxAlarm = self.pPeakSpinBox.value()
+
+
+# ============== main() funcion =======================
+
 
 def main():
     if REALSENSORS:
@@ -353,7 +427,7 @@ def main():
 
     # Launch the application window
     app = QtWidgets.QApplication(sys.argv)
-    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
+    # QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
     window = MainWindow()
     window.show()
 
