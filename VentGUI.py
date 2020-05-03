@@ -30,8 +30,9 @@ ADDRESS = 0x01        # Address for sensor comms
 
 # Simple utility function to round a float to a specified number of digits (defaults to 2) and convert to string
 def floatToStr(value, numDigits=2):
-    # if we want to round to 0 digits, convert to an int, otherwise we get trailing ".0" which we don't want
-    v = int(value) if (numDigits==0) else round(value, numDigits)
+    v = round(value, numDigits) # round to nearest value
+    if (numDigits==0):
+        v = int(v)  # cast to int to avoid trailing ".0" in string which we don't want
     return str(v)
 
 # Simple average function that returns 0 if array is empty
@@ -204,6 +205,10 @@ class MainWindow(QtWidgets.QMainWindow):
     newPpeak = pyqtSignal(float)
     newVte = pyqtSignal(float)
     newPEEP = pyqtSignal(float)
+    # Emit data rounded to nearest int - needed for alarms window
+    newPpeakInt = pyqtSignal(int)
+    newVteInt = pyqtSignal(int)
+    newPEEPInt = pyqtSignal(int)
 
     # Colour settings
     alarmStyle = ".QFrame {background-color: #ff0000; border: 4px solid white;} .QLabel {color: white;}"
@@ -244,9 +249,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.VteMaxAlarm = 1000
         self.VteMinAlarm = 0
         self.PEEPMaxAlarm = 25
-        self.pPeakAlarmSet = False
-        self.VteAlarmSet = False
-        self.PEEPAlarmSet = False
+        #MMNOTE change to false
+        self.pPeakAlarmSet = True
+        self.VteAlarmSet = True
+        self.PEEPAlarmSet = True
 
 
         # Some additional variables to calculate stats
@@ -331,13 +337,19 @@ class MainWindow(QtWidgets.QMainWindow):
             self.posPeaks = self.posPeaks[1:]
         self.posPeaks.append(max(self.pressData))
 
-        # Emit messages to update stats on every 5th call (250ms)
+        # Emit messages (float and rounded to nearest int) to update stats on every 5th call (250ms)
         self.timeCount += 1
         if(self.timeCount>5):
-           self.newPpeak.emit(avg(self.posPeaks))
-           self.newVte.emit(avg(self.expV))
-           self.newPEEP.emit(avg(self.PEEP))
-           self.timeCount = 0
+            e = avg(self.posPeaks)
+            self.newPpeak.emit(e)
+            self.newPpeakInt.emit(round(e))
+            e = avg(self.expV)
+            self.newVte.emit(e)
+            self.newVteInt.emit(round(e))
+            e = avg(self.PEEP)
+            self.newPEEP.emit(e)
+            self.newPEEPInt.emit(round(e))
+            self.timeCount = 0
 
     # Update the pressure graph (slot for handling newPress signal)
     @pyqtSlot(float)
@@ -371,10 +383,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def setVte(self, value):
         self.valVte.setText(floatToStr(value,0))
 
+
     # Change PEEP value (slot for handling newPEEP signal)
     @pyqtSlot(float)
     def setPEEP(self, value):
         self.valPeep.setText(floatToStr(value,1))
+        if self.PEEPAlarmSet:
+            self.valPeep.setText(floatToStr(value,1))
+        else:
+            self.valPeep.setText("--")
+        if value > self.PEEPMaxAlarm:
+            self.framePEEP.setStyleSheet(MainWindow.alarmStyle)
+        else:
+            self.framePEEP.setStyleSheet(MainWindow.normalStyle)
 
     # Quit out of the app by pressing ESC key
     def keyPressEvent(self, e):
@@ -392,6 +413,13 @@ class MainWindow(QtWidgets.QMainWindow):
 # ============== Alarm Settings Window =================
 
 class AlarmSettings(QtWidgets.QDialog):
+
+    # Design settings
+    barStyle = "QProgressBar { background-color: black; border: 0px solid grey; border-radius: 0px; text-align: center; } QProgressBar::chunk {background-color: white; height: 1px;}"
+    whiteButtonStyle = "QPushButton { background-color: white; border: 3px solid white; border-radius: 10px;}"
+    sliderMaxNotSetStyle = "QSlider::groove:vertical { background: #2a66ff; width: 0px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/maxhollow.png); height: 30px;}"
+    sliderMaxSetStyle = "QSlider::groove:vertical { background: #2a66ff; width: 0px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/maxfilled.png); height: 30px;}"
+
     def __init__(self, parent):
         super().__init__()
         self.mainWin = parent
@@ -400,19 +428,15 @@ class AlarmSettings(QtWidgets.QDialog):
         uic.loadUi('alarmsettings.ui', self)
         self.showFullScreen();
 
-        # Copy initial alarm status flags from main window
-        self.resetAlarms()
-        #self.pPeakSet = self.mainWin.pPeakAlarmSet
-        #self.VteSet = self.mainWin.VteAlarmSet
-        #self.PEEPSet = self.mainWin.PEEPAlarmSet
-
         # Set up button icons: confirm and cancel with white backgrounds
         self.btnConfirm.setIcon(QIcon('images/tick.png'))
         self.btnConfirm.setIconSize(QtCore.QSize(100,50))
-        self.btnConfirm.setStyleSheet("QPushButton { background-color: white; border: 3px solid white; border-radius: 10px;}")
+        self.btnConfirm.setStyleSheet(AlarmSettings.whiteButtonStyle)
+        self.btnConfirm.setEnabled(False)
         self.btnCancel.setIcon(QIcon('images/x.png'))
         self.btnCancel.setIconSize(QtCore.QSize(50,50))
-        self.btnCancel.setStyleSheet("QPushButton { background-color: white; border: 3px solid white; border-radius: 10px;}")
+        self.btnCancel.setStyleSheet(AlarmSettings.whiteButtonStyle)
+        self.btnCancel.setEnabled(False)
 
         # Set up button icons: logo, home screen and alarm screen
         self.gvsLogo.setPixmap(QPixmap('images/galwayventshare.jpg'))
@@ -431,43 +455,120 @@ class AlarmSettings(QtWidgets.QDialog):
         # When Home button is pressed, close this dialog without updating data first
         self.btnHomeScreen.clicked.connect(self.reject)
 
-        # join sliders to spinboxes - connect up signals to slots
-        self.pPeakSlider.valueChanged.connect(self.pPeakSpinBox.setValue)
-        self.pPeakSpinBox.valueChanged.connect(self.pPeakSlider.setValue)
-        self.pPeakSpinBox.valueChanged.connect(self.pPeakChanged) # extra slot to update alarm flags
+        # Configure the vertical bars and join sensor values to them
+        # pPeak bar
+        self.pPeakBar.setStyleSheet(AlarmSettings.barStyle)
+        self.pPeakBar.setMinimum(0);
+        self.pPeakBar.setMaximum(45);
+        self.mainWin.newPpeakInt.connect(self.pPeakBar.setValue)
+        # Vte bar
+        self.vteBar.setStyleSheet(AlarmSettings.barStyle)
+        self.vteBar.setMinimum(0);
+        self.vteBar.setMaximum(1000);
+        self.mainWin.newVteInt.connect(self.vteBar.setValue)
+        # PEEP bar
+        self.PEEPBar.setStyleSheet(AlarmSettings.barStyle)
+        self.PEEPBar.setMinimum(0);
+        self.PEEPBar.setMaximum(25);
+        self.mainWin.newPEEPInt.connect(self.PEEPBar.setValue)
 
-        # Configure progress bars and join sensor values to them
-        self.pPeakCurrent.setStyleSheet("QProgressBar { border: 0px solid grey; border-radius: 0px; text-align: center; } QProgressBar::chunk {background-color: black; height: 1px;}")
-        self.pPeakCurrent.setMinimum(0);
-        self.pPeakCurrent.setMaximum(45);
-        self.mainWin.newPpeak.connect(self.pPeakCurrent.setValue)
+        # Set up pPeak slider
+        self.pPeakSlider.setMinimum(self.pPeakBar.minimum())
+        self.pPeakSlider.setMaximum(self.pPeakBar.maximum())
+        self.pPeakSlider.setSingleStep(1)
+        self.pPeakSlider.valueChanged.connect(self.pPeakChanged) # slot to update alarm flags and data
+        # Make the label that accompanies this slider transparent for mouse events
+        self.lblPPeakMax.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
 
-    # When an alarm setting is changed, this slot responds and updates the appropriate flag
-    @pyqtSlot()
-    def pPeakChanged(self):
-        self.pPeakSet = True
+        # Set up PEEP slider
+        self.PEEPSlider.setMinimum(self.PEEPBar.minimum())
+        self.PEEPSlider.setMaximum(self.PEEPBar.maximum())
+        self.PEEPSlider.setSingleStep(1)
+        self.PEEPSlider.valueChanged.connect(self.PEEPChanged) # slot to update alarm flags and data
+        # Make the label that accompanies this slider transparent for mouse events
+        self.lblPEEPMax.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+
+        # Now that the controls are configured, set initial alarm values from main window
+        self.resetAlarms()
+
+
+
+    # When a pPeak alarm setting is changed, this slot responds and updates the appropriate flag
+    @pyqtSlot(int)
+    def pPeakChanged(self, newval):
+        # If this is the first time the value has been changed
+        if not self.pPeakChanged:
+            self.pPeakChanged = True
+            self.pPeakSlider.setStyleSheet(AlarmSettings.sliderMaxSetStyle)
+            self.lblPPeakMax.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
+            self.btnCancel.setEnabled(True)
+            self.btnConfirm.setEnabled(True)
+        # Adjust acompanying label
+        self.lblPPeakMax.setText(floatToStr(newval,0))
+        ypos = AlarmSettings.pixelPosFromValue(55, 355, self.pPeakSlider.minimum(), self.pPeakSlider.maximum(), self.pPeakSlider.value())
+        self.lblPPeakMax.setGeometry(255,ypos,40,20)
+
+    # When a PEEP alarm setting is changed, this slot responds and updates the appropriate flag
+    @pyqtSlot(int)
+    def PEEPChanged(self, newval):
+        # If this is the first time the value has been changed
+        if not self.PEEPChanged:
+            self.PEEPChanged = True
+            self.PEEPSlider.setStyleSheet(AlarmSettings.sliderMaxSetStyle)
+            self.lblPEEPMax.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
+            self.btnCancel.setEnabled(True)
+            self.btnConfirm.setEnabled(True)
+        # Adjust acompanying label
+        self.lblPEEPMax.setText(floatToStr(newval,0))
+        ypos = AlarmSettings.pixelPosFromValue(55, 355, self.PEEPSlider.minimum(), self.PEEPSlider.maximum(), self.PEEPSlider.value())
+        self.lblPEEPMax.setGeometry(670,ypos,40,20)
 
     # Update alarms in main window object (slot for when Confirm button is pressed)
     @pyqtSlot()
     def updateAlarms(self):
-        self.mainWin.pPeakMaxAlarm = self.pPeakSlider.value()
-        self.mainWin.pPeakAlarmSet = self.pPeakSet
+        if self.pPeakChanged:
+            self.mainWin.pPeakMaxAlarm = self.pPeakSlider.value()
+            self.mainWin.pPeakAlarmSet = True
+        if  self.PEEPChanged:
+            self.mainWin.PEEPMaxAlarm = self.PEEPSlider.value()
+            self.mainWin.PEEPAlarmSet = True
 
     # Set/reset alarms from main window object: when dialog opened and slot for Cancel button
     @pyqtSlot()
     def resetAlarms(self):
+        # Ppeak
         self.pPeakSlider.setValue(self.mainWin.pPeakMaxAlarm)
-        self.pPeakSet = self.mainWin.pPeakAlarmSet
+        self.pPeakSlider.setStyleSheet(AlarmSettings.sliderMaxNotSetStyle)
+        self.lblPPeakMax.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
+        self.pPeakChanged = False
+        # PEEP
+        self.PEEPSlider.setValue(self.mainWin.PEEPMaxAlarm)
+        self.PEEPSlider.setStyleSheet(AlarmSettings.sliderMaxNotSetStyle)
+        self.lblPEEPMax.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
+        self.PEEPChanged = False
+        # Confirm & Cancel buttons
+        self.btnCancel.setEnabled(False)
+        self.btnConfirm.setEnabled(False)
+
+
+    # Given pixel min and max values, and slider min and max values, and the current value, return its pixel position
+    # Note order of maxPix, minPix: this is because of orientation of my sliders
+    def pixelPosFromValue(maxPix, minPix, minVal, maxVal, value):
+        pixPos = minPix + (value-minVal) * (maxPix-minPix) / (maxVal-minVal)
+        return pixPos
+
 
     def __del__(self):
         # This is called when the dialog is closed
         # Need to disconnect slots connected to signals before closing the dialog
-        self.mainWin.newPpeak.disconnect(self.pPeakCurrent.setValue)
+        self.mainWin.newPpeakInt.disconnect(self.pPeakCurrent.setValue)
+        self.mainWin.newPEEPInt.disconnect(self.PEEPBar.setValue)
+        self.mainWin.newVteInt.disconnect(self.vteCurrent.setValue)
+
 
 
 # ============== main() funcion =======================
-
 
 def main():
     if REALSENSORS:
@@ -480,7 +581,7 @@ def main():
 
     # Launch the application window
     app = QtWidgets.QApplication(sys.argv)
-    # QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
+    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
     window = MainWindow()
     window.show()
 
