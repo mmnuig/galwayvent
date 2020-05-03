@@ -235,11 +235,29 @@
         </color>
        </brush>
       </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
+        </color>
+       </brush>
+      </colorrole>
      </active>
      <inactive>
       <colorrole role="Text">
        <brush brushstyle="SolidPattern">
         <color alpha="255">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
+        </color>
+       </brush>
+      </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
          <red>42</red>
          <green>102</green>
          <blue>255</blue>
@@ -254,6 +272,15 @@
          <red>120</red>
          <green>120</green>
          <blue>120</blue>
+        </color>
+       </brush>
+      </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
         </color>
        </brush>
       </colorrole>
@@ -437,11 +464,29 @@
         </color>
        </brush>
       </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
+        </color>
+       </brush>
+      </colorrole>
      </active>
      <inactive>
       <colorrole role="Text">
        <brush brushstyle="SolidPattern">
         <color alpha="255">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
+        </color>
+       </brush>
+      </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
          <red>42</red>
          <green>102</green>
          <blue>255</blue>
@@ -456,6 +501,15 @@
          <red>120</red>
          <green>120</green>
          <blue>120</blue>
+        </color>
+       </brush>
+      </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
         </color>
        </brush>
       </colorrole>
@@ -574,11 +628,29 @@
         </color>
        </brush>
       </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
+        </color>
+       </brush>
+      </colorrole>
      </active>
      <inactive>
       <colorrole role="Text">
        <brush brushstyle="SolidPattern">
         <color alpha="255">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
+        </color>
+       </brush>
+      </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
          <red>42</red>
          <green>102</green>
          <blue>255</blue>
@@ -593,6 +665,15 @@
          <red>120</red>
          <green>120</green>
          <blue>120</blue>
+        </color>
+       </brush>
+      </colorrole>
+      <colorrole role="PlaceholderText">
+       <brush brushstyle="NoBrush">
+        <color alpha="128">
+         <red>42</red>
+         <green>102</green>
+         <blue>255</blue>
         </color>
        </brush>
       </colorrole>
@@ -890,6 +971,85 @@
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
+  <widget class="QLabel" name="lblVteMax">
+   <property name="geometry">
+    <rect>
+     <x>445</x>
+     <y>100</y>
+     <width>40</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>16</pointsize>
+    </font>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>800</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QSlider" name="vteMaxSlider">
+   <property name="geometry">
+    <rect>
+     <x>430</x>
+     <y>50</y>
+     <width>70</width>
+     <height>180</height>
+    </rect>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Vertical</enum>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lblVteMin">
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>330</y>
+     <width>40</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>16</pointsize>
+    </font>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>100</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QSlider" name="vteMinSlider">
+   <property name="geometry">
+    <rect>
+     <x>430</x>
+     <y>230</y>
+     <width>70</width>
+     <height>180</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>50</number>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Vertical</enum>
+   </property>
+  </widget>
+  <zorder>vteMinSlider</zorder>
+  <zorder>vteMaxSlider</zorder>
   <zorder>pPeakSlider</zorder>
   <zorder>lblPpeak_2</zorder>
   <zorder>lblPpeak</zorder>
@@ -914,6 +1074,8 @@
   <zorder>lblPeep_2</zorder>
   <zorder>lblVte_2</zorder>
   <zorder>lblVte</zorder>
+  <zorder>lblVteMax</zorder>
+  <zorder>lblVteMin</zorder>
  </widget>
  <resources/>
  <connections/>
