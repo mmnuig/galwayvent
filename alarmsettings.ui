@@ -540,7 +540,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <pointsize>15</pointsize>
     </font>
    </property>
    <property name="layoutDirection">
@@ -690,7 +690,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <pointsize>15</pointsize>
     </font>
    </property>
    <property name="layoutDirection">
@@ -901,7 +901,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <pointsize>15</pointsize>
     </font>
    </property>
    <property name="layoutDirection">
@@ -938,7 +938,7 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>16</pointsize>
+     <pointsize>15</pointsize>
     </font>
    </property>
    <property name="layoutDirection">

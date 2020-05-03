@@ -12,5 +12,7 @@
         <file>images/tick.png</file>
         <file>images/x.png</file>
         <file>images/galwayventshare.jpg</file>
+        <file>images/alarmnotset.png</file>
+        <file>images/alarmon.png</file>
     </qresource>
 </RCC>

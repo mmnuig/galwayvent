@@ -228,6 +228,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btnAlarmScreen.setIcon(QIcon('images/alarmscreennot.png'))
         self.btnAlarmScreen.setIconSize(QtCore.QSize(50,50))
 
+        # Set up alarm icons
+        self.iconPPeakAlarm.setPixmap(QPixmap('images/alarmnotset.png'))
+        self.iconVteAlarm.setPixmap(QPixmap('images/alarmnotset.png'))
+        self.iconPEEPAlarm.setPixmap(QPixmap('images/alarmnotset.png'))
+
         # Set up a timer to get new data at fixed intervals
         self.timer = QtCore.QTimer()
         self.timer.setInterval(interval)
@@ -249,11 +254,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.vteMaxAlarm = 1000
         self.vteMinAlarm = 0
         self.PEEPMaxAlarm = 25
-        #MMNOTE change to false
-        self.pPeakAlarmSet = True
-        self.VteAlarmSet = True
-        self.PEEPAlarmSet = True
-
+        self.pPeakAlarmSet = False
+        self.vteAlarmSet = False
+        self.PEEPAlarmSet = False
 
         # Some additional variables to calculate stats
         # Note - moved some of these from being class variables to instance variables
@@ -370,26 +373,30 @@ class MainWindow(QtWidgets.QMainWindow):
     def setPpeak(self, value):
         if self.pPeakAlarmSet:
             self.valPpeak.setText(floatToStr(value,1))
+            if value > self.pPeakMaxAlarm:
+                self.framePpeak.setStyleSheet(MainWindow.alarmStyle)
+                self.iconPPeakAlarm.setPixmap(QPixmap('images/alarmon.png'))
+            else:
+                self.framePpeak.setStyleSheet(MainWindow.normalStyle)
+                self.iconPPeakAlarm.setPixmap(QPixmap('images/alarmset.png'))
         else:
             self.valPpeak.setText("--")
-        if value > self.pPeakMaxAlarm:
-            self.framePpeak.setStyleSheet(MainWindow.alarmStyle)
-        else:
-            self.framePpeak.setStyleSheet(MainWindow.normalStyle)
 
 
     # Change Vte value (slot for handling newVte signal)
     @pyqtSlot(float)
     def setVte(self, value):
         self.valVte.setText(floatToStr(value,0))
-        if self.VteAlarmSet:
+        if self.vteAlarmSet:
             self.valVte.setText(floatToStr(value,0))
+            if value < self.vteMinAlarm or value > self.vteMaxAlarm:
+                self.frameVte.setStyleSheet(MainWindow.alarmStyle)
+                self.iconVteAlarm.setPixmap(QPixmap('images/alarmon.png'))
+            else:
+                self.frameVte.setStyleSheet(MainWindow.normalStyle)
+                self.iconVteAlarm.setPixmap(QPixmap('images/alarmset.png'))
         else:
             self.valVte.setText("---")
-        if value < self.vteMinAlarm or value > self.vteMaxAlarm:
-            self.frameVte.setStyleSheet(MainWindow.alarmStyle)
-        else:
-            self.frameVte.setStyleSheet(MainWindow.normalStyle)
 
     # Change PEEP value (slot for handling newPEEP signal)
     @pyqtSlot(float)
@@ -397,12 +404,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.valPeep.setText(floatToStr(value,1))
         if self.PEEPAlarmSet:
             self.valPeep.setText(floatToStr(value,1))
+            if value > self.PEEPMaxAlarm:
+                self.framePEEP.setStyleSheet(MainWindow.alarmStyle)
+                self.iconPEEPAlarm.setPixmap(QPixmap('images/alarmon.png'))
+            else:
+                self.framePEEP.setStyleSheet(MainWindow.normalStyle)
+                self.iconPEEPAlarm.setPixmap(QPixmap('images/alarmset.png'))
         else:
             self.valPeep.setText("--")
-        if value > self.PEEPMaxAlarm:
-            self.framePEEP.setStyleSheet(MainWindow.alarmStyle)
-        else:
-            self.framePEEP.setStyleSheet(MainWindow.normalStyle)
 
     # Quit out of the app by pressing ESC key
     def keyPressEvent(self, e):
@@ -414,6 +423,7 @@ class MainWindow(QtWidgets.QMainWindow):
         alarmSettings = AlarmSettings(self)
         alarmSettings.setGeometry(0,0,800,480) # Ensure initial position is 0,0
         alarmSettings.exec_()
+
 
 
 
@@ -435,7 +445,7 @@ class AlarmSettings(QtWidgets.QDialog):
 
         #Load the UI Page
         uic.loadUi('alarmsettings.ui', self)
-        #self.showFullScreen();
+        self.showFullScreen();
 
         # Flags for when alarm settings are changed
         self.pPeakChanged = False
