@@ -4,7 +4,7 @@
 
 from PyQt5 import Qt, QtWidgets, QtCore, uic
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QPalette
+from PyQt5.QtGui import QPalette, QIcon, QPixmap
 
 import pyqtgraph as pg
 import sys  # We need sys so that we can pass argv to QApplication
@@ -207,7 +207,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # Colour settings
     alarmStyle = ".QFrame {background-color: #ff0000; border: 4px solid white;} .QLabel {color: white;}"
-    normalStyle = ".QFrame {background-color: #2a66ff;} .QLabel {color: white;}"
+    normalStyle = ".QFrame {background-color: #2a66ff; border: 0px} .QLabel {color: white;}"
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -215,6 +215,13 @@ class MainWindow(QtWidgets.QMainWindow):
         #Load the UI Page
         uic.loadUi('mainwindow.ui', self)
         self.showFullScreen();
+
+        # Set up button icons: logo, home screen and alarm screen
+        self.gvsLogo.setPixmap(QPixmap('images/galwayventshare.jpg'))
+        self.btnHomeScreen.setIcon(QIcon('images/homescreen.png'))
+        self.btnHomeScreen.setIconSize(QtCore.QSize(50,50))
+        self.btnAlarmScreen.setIcon(QIcon('images/alarmscreennot.png'))
+        self.btnAlarmScreen.setIconSize(QtCore.QSize(50,50))
 
         # Set up a timer to get new data at fixed intervals
         self.timer = QtCore.QTimer()
@@ -232,11 +239,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setupPressurePlot(self.timeData, self.pressData)
         self.setupFlowPlot(self.timeData, self.flowData)
 
-        # Alarm thresholds
-        self.pPeakMaxAlarm = 35
-        self.VteMaxAlarm = 500
-        self.VteMinAlarm = 350
-        self.PEEPMaxAlarm = 15
+        # Alarm settings
+        self.pPeakMaxAlarm = 45
+        self.VteMaxAlarm = 1000
+        self.VteMinAlarm = 0
+        self.PEEPMaxAlarm = 25
+        self.pPeakAlarmSet = False
+        self.VteAlarmSet = False
+        self.PEEPAlarmSet = False
+
 
         # Some additional variables to calculate stats
         # Note - moved some of these from being class variables to instance variables
@@ -260,7 +271,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.newPEEP.connect(self.setPEEP)
 
         # Connect up signals to slots - standard UI signals
-        self.btnAlarmSet.clicked.connect(self.showAlarmSettings)
+        self.btnAlarmScreen.clicked.connect(self.showAlarmSettings)
 
     def setupPressurePlot(self, hour, press):
         self.pressureLine = self.pressGraphWidget.plot(hour, press, pen=self.linePen)
@@ -345,7 +356,10 @@ class MainWindow(QtWidgets.QMainWindow):
     # Change Ppeak value (slot for handling newPpeak signal)
     @pyqtSlot(float)
     def setPpeak(self, value):
-        self.valPpeak.setText(floatToStr(value,1))
+        if self.pPeakAlarmSet:
+            self.valPpeak.setText(floatToStr(value,1))
+        else:
+            self.valPpeak.setText("--")
         if value > self.pPeakMaxAlarm:
             self.framePpeak.setStyleSheet(MainWindow.alarmStyle)
         else:
@@ -370,6 +384,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # Open the alarm settings screen
     def showAlarmSettings(self):
         alarmSettings = AlarmSettings(self)
+        alarmSettings.setGeometry(0,0,800,480) # Ensure initial position is 0,0
         alarmSettings.exec_()
 
 
@@ -380,37 +395,75 @@ class AlarmSettings(QtWidgets.QDialog):
     def __init__(self, parent):
         super().__init__()
         self.mainWin = parent
+
         #Load the UI Page
         uic.loadUi('alarmsettings.ui', self)
-        #self.showFullScreen(); # TODO make full screen
+        self.showFullScreen();
+
+        # Copy initial alarm status flags from main window
+        self.resetAlarms()
+        #self.pPeakSet = self.mainWin.pPeakAlarmSet
+        #self.VteSet = self.mainWin.VteAlarmSet
+        #self.PEEPSet = self.mainWin.PEEPAlarmSet
+
+        # Set up button icons: confirm and cancel with white backgrounds
+        self.btnConfirm.setIcon(QIcon('images/tick.png'))
+        self.btnConfirm.setIconSize(QtCore.QSize(100,50))
+        self.btnConfirm.setStyleSheet("QPushButton { background-color: white; border: 3px solid white; border-radius: 10px;}")
+        self.btnCancel.setIcon(QIcon('images/x.png'))
+        self.btnCancel.setIconSize(QtCore.QSize(50,50))
+        self.btnCancel.setStyleSheet("QPushButton { background-color: white; border: 3px solid white; border-radius: 10px;}")
+
+        # Set up button icons: logo, home screen and alarm screen
+        self.gvsLogo.setPixmap(QPixmap('images/galwayventshare.jpg'))
+        self.btnHomeScreen.setIcon(QIcon('images/homescreennot.png'))
+        self.btnHomeScreen.setIconSize(QtCore.QSize(50,50))
+        self.btnAlarmScreen.setIcon(QIcon('images/alarmscreen.png'))
+        self.btnAlarmScreen.setIconSize(QtCore.QSize(50,50))
+
+        # Button signals and slots
+        # Note that btnAlarmScreen does nothing as we are on that screen already
+
+        # When Confirm button is pressed, set the alarm limits for the main window
+        self.btnConfirm.clicked.connect(self.updateAlarms)
+        # When Cancel button is pressed, reset alarm limits back to those from main window
+        self.btnCancel.clicked.connect(self.resetAlarms)
+        # When Home button is pressed, close this dialog without updating data first
+        self.btnHomeScreen.clicked.connect(self.reject)
 
         # join sliders to spinboxes - connect up signals to slots
         self.pPeakSlider.valueChanged.connect(self.pPeakSpinBox.setValue)
         self.pPeakSpinBox.valueChanged.connect(self.pPeakSlider.setValue)
-
-        # set initial values based on main window values
-        self.pPeakSpinBox.setValue(self.mainWin.pPeakMaxAlarm)
+        self.pPeakSpinBox.valueChanged.connect(self.pPeakChanged) # extra slot to update alarm flags
 
         # Configure progress bars and join sensor values to them
-        self.pPeakCurrent.setStyleSheet("QProgressBar { border: 0px solid grey; border-radius: 0px; text-align: center; } QProgressBar::chunk {background-color: #00ff00; height: 1px;}")
+        self.pPeakCurrent.setStyleSheet("QProgressBar { border: 0px solid grey; border-radius: 0px; text-align: center; } QProgressBar::chunk {background-color: black; height: 1px;}")
         self.pPeakCurrent.setMinimum(0);
         self.pPeakCurrent.setMaximum(45);
         self.mainWin.newPpeak.connect(self.pPeakCurrent.setValue)
 
 
-        # When the OK button is pressed, set the alarm limits for the main window
-        self.buttonBox.accepted.connect(self.updateAlarms)
+    # When an alarm setting is changed, this slot responds and updates the appropriate flag
+    @pyqtSlot()
+    def pPeakChanged(self):
+        self.pPeakSet = True
 
-    def __del__(self):
-        # Need to disconnect slots connected to signals before closing the dialog
-        print("Deleting alarm dialog object")
-        self.mainWin.newPpeak.disconnect(self.pPeakCurrent.setValue)
-
-    # Update alarms in main window object (slot for when "OK" button is pressed)
+    # Update alarms in main window object (slot for when Confirm button is pressed)
     @pyqtSlot()
     def updateAlarms(self):
-        print("Alarm OK pressed")
-        self.mainWin.pPeakMaxAlarm = self.pPeakSpinBox.value()
+        self.mainWin.pPeakMaxAlarm = self.pPeakSlider.value()
+        self.mainWin.pPeakAlarmSet = self.pPeakSet
+
+    # Set/reset alarms from main window object: when dialog opened and slot for Cancel button
+    @pyqtSlot()
+    def resetAlarms(self):
+        self.pPeakSlider.setValue(self.mainWin.pPeakMaxAlarm)
+        self.pPeakSet = self.mainWin.pPeakAlarmSet
+
+    def __del__(self):
+        # This is called when the dialog is closed
+        # Need to disconnect slots connected to signals before closing the dialog
+        self.mainWin.newPpeak.disconnect(self.pPeakCurrent.setValue)
 
 
 # ============== main() funcion =======================

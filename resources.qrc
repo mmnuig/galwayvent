@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/alarmscreen.png</file>
+        <file>images/alarmscreennot.png</file>
+        <file>images/alarmset.png</file>
+        <file>images/homescreen.png</file>
+        <file>images/homescreennot.png</file>
+        <file>images/maxfilled.png</file>
+        <file>images/maxhollow.png</file>
+        <file>images/minfilled.png</file>
+        <file>images/minhollow.png</file>
+        <file>images/tick.png</file>
+        <file>images/x.png</file>
+        <file>images/galwayventshare.jpg</file>
+    </qresource>
+</RCC>
