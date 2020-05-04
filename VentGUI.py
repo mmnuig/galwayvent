@@ -579,7 +579,7 @@ class AlarmSettings(QtWidgets.QDialog):
         # Adjust acompanying label
         self.lblVteMin.setText(floatToStr(newval,0))
         ypos = AlarmSettings.pixelPosFromValue(235, 385, self.vteMinSlider.minimum(), self.vteMinSlider.maximum(), self.vteMinSlider.value())
-        self.lblVteMin.setGeometry(455,ypos,40,20)
+        self.lblVteMin.setGeometry(445,ypos,50,20)
 
     # When the VteMax alarm setting is changed, this slot responds and updates the appropriate flag
     @pyqtSlot(int)
@@ -594,7 +594,7 @@ class AlarmSettings(QtWidgets.QDialog):
         # Adjust acompanying label
         self.lblVteMax.setText(floatToStr(newval,0))
         ypos = AlarmSettings.pixelPosFromValue(55, 205, self.vteMaxSlider.minimum(), self.vteMaxSlider.maximum(), self.vteMaxSlider.value())
-        self.lblVteMax.setGeometry(455,ypos,40,20)
+        self.lblVteMax.setGeometry(445,ypos,50,20)
 
     # Update alarms in main window object (slot for when Confirm button is pressed)
     @pyqtSlot()
@@ -669,7 +669,7 @@ def main():
 
     # Launch the application window
     app = QtWidgets.QApplication(sys.argv)
-    #QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
+    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
     window = MainWindow()
     window.show()
 
