@@ -669,7 +669,7 @@ def main():
 
     # Launch the application window
     app = QtWidgets.QApplication(sys.argv)
-    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
+    #QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
     window = MainWindow()
     window.show()
 
