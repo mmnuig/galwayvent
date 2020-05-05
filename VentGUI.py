@@ -4,7 +4,7 @@
 
 from PyQt5 import Qt, QtWidgets, QtCore, uic
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QPalette, QIcon, QPixmap
+from PyQt5.QtGui import QPalette, QIcon, QPixmap, QRegion
 
 import pyqtgraph as pg
 import sys  # We need sys so that we can pass argv to QApplication
@@ -436,8 +436,9 @@ class AlarmSettings(QtWidgets.QDialog):
     whiteButtonStyle = "QPushButton { background-color: white; border: 3px solid white; border-radius: 10px;}"
     sliderMaxNotSetStyle = "QSlider::groove:vertical { background: transparent; width: 0px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/maxhollow.png); height: 30px;}"
     sliderMaxSetStyle = "QSlider::groove:vertical { background: transparent; width: 0px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/maxfilled.png); height: 30px;}"
-    sliderMinNotSetStyle = "QSlider::groove:vertical { background: transparent; width: 0px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minhollow.png); height: 30px;}"
-    sliderMinSetStyle = "QSlider::groove:vertical { background: transparent; width: 0px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minfilled.png); height: 30px;}"
+    # NOTE for testing of slider masks, changing background to a visible colour
+    sliderMinNotSetStyle = "QSlider::groove:vertical { background: red; width: 3px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minhollow.png); height: 30px;}"
+    sliderMinSetStyle = "QSlider::groove:vertical { background: orange; width: 3px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minfilled.png); height: 30px;}"
 
     def __init__(self, parent):
         super().__init__()
@@ -580,6 +581,9 @@ class AlarmSettings(QtWidgets.QDialog):
         self.lblVteMin.setText(floatToStr(newval,0))
         ypos = AlarmSettings.pixelPosFromValue(235, 385, self.vteMinSlider.minimum(), self.vteMinSlider.maximum(), self.vteMinSlider.value())
         self.lblVteMin.setGeometry(445,ypos,50,20)
+        # Adjust the slider's mask so that mouse events are only received by the handle (note that regions are relative to slider object)
+        ymask = AlarmSettings.pixelPosFromValue(0, 150, self.vteMinSlider.minimum(), self.vteMinSlider.maximum(), self.vteMinSlider.value())
+        self.vteMinSlider.setMask(QRegion(0, ymask, 70, 30))
 
     # When the VteMax alarm setting is changed, this slot responds and updates the appropriate flag
     @pyqtSlot(int)
@@ -669,7 +673,7 @@ def main():
 
     # Launch the application window
     app = QtWidgets.QApplication(sys.argv)
-    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
+    #QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.BlankCursor) # stop the cursor being displayed
     window = MainWindow()
     window.show()
 
