@@ -437,8 +437,8 @@ class AlarmSettings(QtWidgets.QDialog):
     sliderMaxNotSetStyle = "QSlider::groove:vertical { background: transparent; width: 0px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/maxhollow.png); height: 30px;}"
     sliderMaxSetStyle = "QSlider::groove:vertical { background: transparent; width: 0px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/maxfilled.png); height: 30px;}"
     # NOTE for testing of slider masks, changing background to a visible colour
-    sliderMinNotSetStyle = "QSlider::groove:vertical { background: red; width: 3px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minhollow.png); height: 30px;}"
-    sliderMinSetStyle = "QSlider::groove:vertical { background: orange; width: 3px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minfilled.png); height: 30px;}"
+    sliderMinNotSetStyle = "QSlider::groove:vertical { background: transparent; width: 3px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minhollow.png); height: 30px;}"
+    sliderMinSetStyle = "QSlider::groove:vertical { background: transparent; width: 3px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minfilled.png); height: 30px;}"
 
     def __init__(self, parent):
         super().__init__()
@@ -516,9 +516,9 @@ class AlarmSettings(QtWidgets.QDialog):
 
         # Set up Vte Min slider
         # NOTE: I am not allowing Min and Max sliders to overlap, as they interfere with mouse events of each other
-        vteCrossPoint = 500
+       # vteCrossPoint = 500
         self.vteMinSlider.setMinimum(self.vteBar.minimum())
-        self.vteMinSlider.setMaximum(vteCrossPoint)
+        self.vteMinSlider.setMaximum(self.vteBar.maximum())
         self.vteMinSlider.setValue(20) # give it a non-zero default value so that valueChanged will be triggered correctly
         self.vteMinSlider.setSingleStep(5)
         self.vteMinSlider.valueChanged.connect(self.changeVteMin) # slot to update alarm flags and data
@@ -526,7 +526,7 @@ class AlarmSettings(QtWidgets.QDialog):
         self.lblVteMin.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
         # Set up Vte Max slider
-        self.vteMaxSlider.setMinimum(vteCrossPoint)
+        self.vteMaxSlider.setMinimum(self.vteBar.minimum())
         self.vteMaxSlider.setMaximum(self.vteBar.maximum())
         self.vteMaxSlider.setSingleStep(5)
         self.vteMaxSlider.valueChanged.connect(self.changeVteMax) # slot to update alarm flags and data
@@ -570,6 +570,10 @@ class AlarmSettings(QtWidgets.QDialog):
     # When the VteMin alarm setting is changed, this slot responds and updates the appropriate flag
     @pyqtSlot(int)
     def changeVteMin(self, newval):
+        # Don't let this cross the other Vte slider - note that the setValue() call will trigger another call to this slot, hence the return statement
+        if newval > self.vteMaxSlider.value():
+            self.vteMinSlider.setValue(self.vteMaxSlider.value())
+            return
         # If this is the first time the value has been changed
         if not self.vteMinChanged:
             self.vteMinChanged = True
@@ -577,17 +581,21 @@ class AlarmSettings(QtWidgets.QDialog):
             self.lblVteMin.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
             self.btnCancel.setEnabled(True)
             self.btnConfirm.setEnabled(True)
+        # Adjust the slider's mask so that mouse events are only received by the handle (note that regions are relative to slider object)
+        ymask = AlarmSettings.pixelPosFromValue(0, 300, self.vteMinSlider.minimum(), self.vteMinSlider.maximum(), self.vteMinSlider.value())
+        self.vteMinSlider.setMask(QRegion(0, ymask, 70, 30))
         # Adjust acompanying label
         self.lblVteMin.setText(floatToStr(newval,0))
-        ypos = AlarmSettings.pixelPosFromValue(235, 385, self.vteMinSlider.minimum(), self.vteMinSlider.maximum(), self.vteMinSlider.value())
+        ypos = AlarmSettings.pixelPosFromValue(85, 385, self.vteMinSlider.minimum(), self.vteMinSlider.maximum(), self.vteMinSlider.value())
         self.lblVteMin.setGeometry(445,ypos,50,20)
-        # Adjust the slider's mask so that mouse events are only received by the handle (note that regions are relative to slider object)
-        ymask = AlarmSettings.pixelPosFromValue(0, 150, self.vteMinSlider.minimum(), self.vteMinSlider.maximum(), self.vteMinSlider.value())
-        self.vteMinSlider.setMask(QRegion(0, ymask, 70, 30))
 
     # When the VteMax alarm setting is changed, this slot responds and updates the appropriate flag
     @pyqtSlot(int)
     def changeVteMax(self, newval):
+        # Don't let this cross the other Vte slider - note that the setValue() call will trigger another call to this slot, hence the return statement
+        if newval < self.vteMinSlider.value():
+            self.vteMaxSlider.setValue(self.vteMinSlider.value())
+            return
         # If this is the first time the value has been changed
         if not self.vteMaxChanged:
             self.vteMaxChanged = True
@@ -595,9 +603,12 @@ class AlarmSettings(QtWidgets.QDialog):
             self.lblVteMax.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
             self.btnCancel.setEnabled(True)
             self.btnConfirm.setEnabled(True)
+        # Adjust the slider's mask so that mouse events are only received by the handle (note that regions are relative to slider object)
+        ymask = AlarmSettings.pixelPosFromValue(0, 300, self.vteMaxSlider.minimum(), self.vteMaxSlider.maximum(), self.vteMaxSlider.value())
+        self.vteMaxSlider.setMask(QRegion(0, ymask, 70, 30))
         # Adjust acompanying label
         self.lblVteMax.setText(floatToStr(newval,0))
-        ypos = AlarmSettings.pixelPosFromValue(55, 205, self.vteMaxSlider.minimum(), self.vteMaxSlider.maximum(), self.vteMaxSlider.value())
+        ypos = AlarmSettings.pixelPosFromValue(55, 355, self.vteMaxSlider.minimum(), self.vteMaxSlider.maximum(), self.vteMaxSlider.value())
         self.lblVteMax.setGeometry(445,ypos,50,20)
 
     # Update alarms in main window object (slot for when Confirm button is pressed)
