@@ -18,7 +18,7 @@ import serial
 # =========== Overall settings and utility functions =============
 
 # Some important overall settings
-REALSENSORS=True      # if True, read data from sensors; if false, generate random numbers
+REALSENSORS=False      # if True, read data from sensors; if false, generate random numbers
 interval = 50          # update interval 50ms
 graphPoints = 100      # how many points to display on the graph
 movingWindowPpeak = 20 # Size of the window for estimation of Ppeak
@@ -208,6 +208,7 @@ def force_temperature_update(address): # Force update of temperature on board ca
     reverse_data = data[::-1]
     temp = reverse_data[1:3]
     return temp.hex()
+
 
 # ============== Main Vent GUI Window =================
 
@@ -453,6 +454,17 @@ class AlarmSettings(QtWidgets.QDialog):
     sliderMinNotSetStyle = "QSlider::groove:vertical { background: transparent; width: 3px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minhollow.png); height: 30px;}"
     sliderMinSetStyle = "QSlider::groove:vertical { background: transparent; width: 3px; margin: 0px -22px;} QSlider::handle:vertical {image: url(images/minfilled.png); height: 30px;}"
 
+    # Sliders are a key feature of this screen. Each slider consists of:
+        # A QSlider with a custom wedge-shaped slider marker
+        # A QLabel that displays the current slider value, that moves with the slider marker and is transparent to mouse events
+        # A slot for the QSlider: invert the slider marker; invert the QLabel colour; set the QLabel value; move the QLabel
+        # A QProgressBar beside the slider, displaying the current value of PEEP/Vte/pPeak
+        # A slot for the QProgressBar to keep its value updated
+        # Variables for slider min, max, current value, changed flag
+    # A slider with min and max settings is actualy two overlapping sliders:
+        # Both have the same horizontal position and sligtly offset verticals to allow for the slider marker shape
+        # the QSlider slots include extra code at the start to stop the max and min crossing each other, but either one can cover full range.
+
     def __init__(self, parent):
         super().__init__()
         self.mainWin = parent
@@ -463,7 +475,7 @@ class AlarmSettings(QtWidgets.QDialog):
 
         # Flags for when alarm settings are changed
         self.pPeakChanged = False
-        self.PEEPChanged = False
+        self.PEEPMaxChanged = False
         self.vteMinChanged = False
         self.vteMaxChanged = False
 
@@ -520,10 +532,10 @@ class AlarmSettings(QtWidgets.QDialog):
         self.lblPPeakMax.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
         # Set up PEEP slider
-        self.PEEPSlider.setMinimum(self.PEEPBar.minimum())
-        self.PEEPSlider.setMaximum(self.PEEPBar.maximum())
-        self.PEEPSlider.setSingleStep(1)
-        self.PEEPSlider.valueChanged.connect(self.changePEEP) # slot to update alarm flags and data
+        self.PEEPMaxSlider.setMinimum(self.PEEPBar.minimum())
+        self.PEEPMaxSlider.setMaximum(self.PEEPBar.maximum())
+        self.PEEPMaxSlider.setSingleStep(1)
+        self.PEEPMaxSlider.valueChanged.connect(self.changePEEPMax) # slot to update alarm flags and data
         # Make the label that accompanies this slider transparent for mouse events
         self.lblPEEPMax.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
@@ -567,17 +579,17 @@ class AlarmSettings(QtWidgets.QDialog):
 
     # When a PEEP alarm setting is changed, this slot responds and updates the appropriate flag
     @pyqtSlot(int)
-    def changePEEP(self, newval):
+    def changePEEPMax(self, newval):
         # If this is the first time the value has been changed
-        if not self.PEEPChanged:
-            self.PEEPChanged = True
-            self.PEEPSlider.setStyleSheet(AlarmSettings.sliderMaxSetStyle)
+        if not self.PEEPMaxChanged:
+            self.PEEPMaxChanged = True
+            self.PEEPMaxSlider.setStyleSheet(AlarmSettings.sliderMaxSetStyle)
             self.lblPEEPMax.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
             self.btnCancel.setEnabled(True)
             self.btnConfirm.setEnabled(True)
         # Adjust acompanying label
         self.lblPEEPMax.setText(floatToStr(newval,0))
-        ypos = AlarmSettings.pixelPosFromValue(55, 355, self.PEEPSlider.minimum(), self.PEEPSlider.maximum(), self.PEEPSlider.value())
+        ypos = AlarmSettings.pixelPosFromValue(55, 355, self.PEEPMaxSlider.minimum(), self.PEEPMaxSlider.maximum(), self.PEEPMaxSlider.value())
         self.lblPEEPMax.setGeometry(670,ypos,40,20)
 
     # When the VteMin alarm setting is changed, this slot responds and updates the appropriate flag
@@ -630,8 +642,8 @@ class AlarmSettings(QtWidgets.QDialog):
         if self.pPeakChanged:
             self.mainWin.pPeakMaxAlarm = self.pPeakSlider.value()
             self.mainWin.pPeakAlarmSet = True
-        if  self.PEEPChanged:
-            self.mainWin.PEEPMaxAlarm = self.PEEPSlider.value()
+        if  self.PEEPMaxChanged:
+            self.mainWin.PEEPMaxAlarm = self.PEEPMaxSlider.value()
             self.mainWin.PEEPAlarmSet = True
         if  self.vteMinChanged or self.vteMaxChanged:
             self.mainWin.vteMinAlarm = self.vteMinSlider.value()
@@ -649,11 +661,11 @@ class AlarmSettings(QtWidgets.QDialog):
         self.pPeakSlider.setStyleSheet(AlarmSettings.sliderMaxNotSetStyle)
         self.lblPPeakMax.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
         self.pPeakChanged = False
-        # PEEP
-        self.PEEPSlider.setValue(self.mainWin.PEEPMaxAlarm)
-        self.PEEPSlider.setStyleSheet(AlarmSettings.sliderMaxNotSetStyle)
+        # PEEPMax
+        self.PEEPMaxSlider.setValue(self.mainWin.PEEPMaxAlarm)
+        self.PEEPMaxSlider.setStyleSheet(AlarmSettings.sliderMaxNotSetStyle)
         self.lblPEEPMax.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
-        self.PEEPChanged = False
+        self.PEEPMaxChanged = False
         # VteMin
         self.vteMinSlider.setValue(self.mainWin.vteMinAlarm)
         self.vteMinSlider.setStyleSheet(AlarmSettings.sliderMinNotSetStyle)
