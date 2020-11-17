@@ -1275,29 +1275,13 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnHomeScreen">
-    <property name="geometry">
-     <rect>
-      <x>45</x>
-      <y>50</y>
-      <width>50</width>
-      <height>50</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="flat">
-     <bool>true</bool>
-    </property>
-   </widget>
    <widget class="QPushButton" name="btnAlarmScreen">
     <property name="geometry">
      <rect>
-      <x>45</x>
-      <y>110</y>
-      <width>50</width>
-      <height>50</height>
+      <x>35</x>
+      <y>70</y>
+      <width>70</width>
+      <height>70</height>
      </rect>
     </property>
     <property name="text">
@@ -1728,7 +1712,6 @@
    <zorder>widget</zorder>
    <zorder>flowGraphWidget</zorder>
    <zorder>pressGraphWidget</zorder>
-   <zorder>btnHomeScreen</zorder>
    <zorder>btnAlarmScreen</zorder>
    <zorder>framePEEP</zorder>
    <zorder>frameVte</zorder>

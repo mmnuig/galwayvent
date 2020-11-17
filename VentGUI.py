@@ -237,10 +237,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Set up button icons: logo, home screen and alarm screen
         self.gvsLogo.setPixmap(QPixmap('images/galwayventshare.jpg'))
-        self.btnHomeScreen.setIcon(QIcon('images/homescreen.png'))
-        self.btnHomeScreen.setIconSize(QtCore.QSize(50,50))
         self.btnAlarmScreen.setIcon(QIcon('images/alarmscreennot.png'))
-        self.btnAlarmScreen.setIconSize(QtCore.QSize(50,50))
+        self.btnAlarmScreen.setIconSize(QtCore.QSize(70,70))
 
         # Set up alarm icons
         self.iconPPeakAlarm.setPixmap(QPixmap('images/alarmnotset.png'))
@@ -486,27 +484,17 @@ class AlarmSettings(QtWidgets.QDialog):
         self.btnConfirm.setIconSize(QtCore.QSize(100,50))
         self.btnConfirm.setStyleSheet(AlarmSettings.whiteButtonStyle)
         self.btnConfirm.setEnabled(True)
-        #self.btnCancel.setIcon(QIcon('images/x.png'))
-        #self.btnCancel.setIconSize(QtCore.QSize(50,50))
-        #self.btnCancel.setStyleSheet(AlarmSettings.whiteButtonStyle)
-        #self.btnCancel.setEnabled(False)
 
         # Set up button icons: logo, home screen and alarm screen
         self.gvsLogo.setPixmap(QPixmap('images/galwayventshare.jpg'))
-        self.btnHomeScreen.setIcon(QIcon('images/homescreennot.png'))
-        self.btnHomeScreen.setIconSize(QtCore.QSize(50,50))
         self.btnAlarmScreen.setIcon(QIcon('images/alarmscreen.png'))
-        self.btnAlarmScreen.setIconSize(QtCore.QSize(50,50))
+        self.btnAlarmScreen.setIconSize(QtCore.QSize(70,70))
 
         # Button signals and slots
         # Note that btnAlarmScreen does nothing as we are on that screen already
 
-        # When Confirm button is pressed, set the alarm limits for the main window
+        # When Confirm button is pressed, set the alarm limits and returns to main window
         self.btnConfirm.clicked.connect(self.updateAlarmsAndClose)
-        # When Cancel button is pressed, reset alarm limits back to those from main window
-        #self.btnCancel.clicked.connect(self.resetAlarms)
-        # When Home button is pressed, close this dialog without updating data first
-        self.btnHomeScreen.clicked.connect(self.reject)
 
         # Configure the vertical bars and join sensor values to them
         # pPeak bar
@@ -580,8 +568,6 @@ class AlarmSettings(QtWidgets.QDialog):
             self.pPeakChanged = True
             self.pPeakSlider.setStyleSheet(AlarmSettings.sliderMaxSetStyle)
             self.lblPPeakMax.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
-            #self.btnCancel.setEnabled(True)
-            #self.btnConfirm.setEnabled(True)
         # Adjust acompanying label
         self.lblPPeakMax.setText(floatToStr(newval,0))
         ypos = AlarmSettings.pixelPosFromValue(55, 355, self.pPeakSlider.minimum(), self.pPeakSlider.maximum(), self.pPeakSlider.value())
@@ -599,8 +585,6 @@ class AlarmSettings(QtWidgets.QDialog):
             self.PEEPMinChanged = True
             self.PEEPMinSlider.setStyleSheet(AlarmSettings.sliderMinSetStyle)
             self.lblPEEPMin.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
-            #self.btnCancel.setEnabled(True)
-            #self.btnConfirm.setEnabled(True)
         # Adjust the slider's mask so that mouse events are only received by the handle (note that regions are relative to slider object)
         ymask = AlarmSettings.pixelPosFromValue(0, 300, self.PEEPMinSlider.minimum(), self.PEEPMinSlider.maximum(), self.PEEPMinSlider.value())
         self.PEEPMinSlider.setMask(QRegion(0, ymask, 70, 30))
@@ -621,8 +605,6 @@ class AlarmSettings(QtWidgets.QDialog):
             self.PEEPMaxChanged = True
             self.PEEPMaxSlider.setStyleSheet(AlarmSettings.sliderMaxSetStyle)
             self.lblPEEPMax.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
-            #self.btnCancel.setEnabled(True)
-            #self.btnConfirm.setEnabled(True)
         # Adjust acompanying label
         self.lblPEEPMax.setText(floatToStr(newval,0))
         ypos = AlarmSettings.pixelPosFromValue(55, 355, self.PEEPMaxSlider.minimum(), self.PEEPMaxSlider.maximum(), self.PEEPMaxSlider.value())
@@ -640,8 +622,6 @@ class AlarmSettings(QtWidgets.QDialog):
             self.vteMinChanged = True
             self.vteMinSlider.setStyleSheet(AlarmSettings.sliderMinSetStyle)
             self.lblVteMin.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
-            #self.btnCancel.setEnabled(True)
-            #self.btnConfirm.setEnabled(True)
         # Adjust the slider's mask so that mouse events are only received by the handle (note that regions are relative to slider object)
         ymask = AlarmSettings.pixelPosFromValue(0, 300, self.vteMinSlider.minimum(), self.vteMinSlider.maximum(), self.vteMinSlider.value())
         self.vteMinSlider.setMask(QRegion(0, ymask, 70, 30))
@@ -662,8 +642,6 @@ class AlarmSettings(QtWidgets.QDialog):
             self.vteMaxChanged = True
             self.vteMaxSlider.setStyleSheet(AlarmSettings.sliderMaxSetStyle)
             self.lblVteMax.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
-            #self.btnCancel.setEnabled(True)
-            #self.btnConfirm.setEnabled(True)
         # Adjust the slider's mask so that mouse events are only received by the handle (note that regions are relative to slider object)
         ymask = AlarmSettings.pixelPosFromValue(0, 300, self.vteMaxSlider.minimum(), self.vteMaxSlider.maximum(), self.vteMaxSlider.value())
         self.vteMaxSlider.setMask(QRegion(0, ymask, 70, 30))
@@ -718,9 +696,6 @@ class AlarmSettings(QtWidgets.QDialog):
         self.vteMinSlider.setStyleSheet(AlarmSettings.sliderMinNotSetStyle)
         self.lblVteMin.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
         self.vteMinChanged = False
-        # Confirm & Cancel buttons
-        #self.btnCancel.setEnabled(False)
-        #self.btnConfirm.setEnabled(False)
 
 
     # Given pixel min and max values, and slider min and max values, and the current value, return its pixel position
