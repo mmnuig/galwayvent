@@ -265,8 +265,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Alarm settings
         self.pPeakMaxAlarm = 45
-        self.vteMaxAlarm = 1000
         self.vteMinAlarm = 0
+        self.vteMaxAlarm = 1000
+        self.PEEPMinAlarm = 0
         self.PEEPMaxAlarm = 25
         self.pPeakAlarmSet = False
         self.vteAlarmSet = False
@@ -418,7 +419,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.valPeep.setText(floatToStr(value,1))
         if self.PEEPAlarmSet:
             self.valPeep.setText(floatToStr(value,1))
-            if value > self.PEEPMaxAlarm:
+            if value < self.PEEPMinAlarm or value > self.PEEPMaxAlarm:
                 self.framePEEP.setStyleSheet(MainWindow.alarmStyle)
                 self.iconPEEPAlarm.setPixmap(QPixmap('images/alarmon.png'))
             else:
@@ -475,6 +476,7 @@ class AlarmSettings(QtWidgets.QDialog):
 
         # Flags for when alarm settings are changed
         self.pPeakChanged = False
+        self.PEEPMinChanged = False
         self.PEEPMaxChanged = False
         self.vteMinChanged = False
         self.vteMaxChanged = False
@@ -531,7 +533,15 @@ class AlarmSettings(QtWidgets.QDialog):
         # Make the label that accompanies this slider transparent for mouse events
         self.lblPPeakMax.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
-        # Set up PEEP slider
+        # Set up PEEP Min slider
+        self.PEEPMinSlider.setMinimum(self.PEEPBar.minimum())
+        self.PEEPMinSlider.setMaximum(self.PEEPBar.maximum())
+        self.PEEPMinSlider.setSingleStep(1)
+        self.PEEPMinSlider.valueChanged.connect(self.changePEEPMin) # slot to update alarm flags and data
+        # Make the label that accompanies this slider transparent for mouse events
+        self.lblPEEPMin.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+
+        # Set up PEEP Max slider
         self.PEEPMaxSlider.setMinimum(self.PEEPBar.minimum())
         self.PEEPMaxSlider.setMaximum(self.PEEPBar.maximum())
         self.PEEPMaxSlider.setSingleStep(1)
@@ -540,8 +550,6 @@ class AlarmSettings(QtWidgets.QDialog):
         self.lblPEEPMax.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
         # Set up Vte Min slider
-        # NOTE: I am not allowing Min and Max sliders to overlap, as they interfere with mouse events of each other
-       # vteCrossPoint = 500
         self.vteMinSlider.setMinimum(self.vteBar.minimum())
         self.vteMinSlider.setMaximum(self.vteBar.maximum())
         self.vteMinSlider.setValue(20) # give it a non-zero default value so that valueChanged will be triggered correctly
@@ -560,6 +568,8 @@ class AlarmSettings(QtWidgets.QDialog):
 
         # Now that the controls are configured, set initial alarm values from main window
         self.resetAlarms()
+        # Calling this function twice because there seems to be a synchronisation issue
+        self.resetAlarms()
 
 
     # When a pPeak alarm setting is changed, this slot responds and updates the appropriate flag
@@ -577,9 +587,35 @@ class AlarmSettings(QtWidgets.QDialog):
         ypos = AlarmSettings.pixelPosFromValue(55, 355, self.pPeakSlider.minimum(), self.pPeakSlider.maximum(), self.pPeakSlider.value())
         self.lblPPeakMax.setGeometry(255,ypos,40,20)
 
-    # When a PEEP alarm setting is changed, this slot responds and updates the appropriate flag
+    # When the PEEP Min alarm setting is changed, this slot responds and updates the appropriate flag
+    @pyqtSlot(int)
+    def changePEEPMin(self, newval):
+        # Don't let this cross the other PEEP slider - note that the setValue() call will trigger another call to this slot, hence the return statement
+        if newval > self.PEEPMaxSlider.value():
+            self.PEEPMinSlider.setValue(self.PEEPMaxSlider.value())
+            return
+        # If this is the first time the value has been changed
+        if not self.PEEPMinChanged:
+            self.PEEPMinChanged = True
+            self.PEEPMinSlider.setStyleSheet(AlarmSettings.sliderMinSetStyle)
+            self.lblPEEPMin.setStyleSheet("QLabel {color: #2a66ff;}") # label becomes blue on white background
+            self.btnCancel.setEnabled(True)
+            self.btnConfirm.setEnabled(True)
+        # Adjust the slider's mask so that mouse events are only received by the handle (note that regions are relative to slider object)
+        ymask = AlarmSettings.pixelPosFromValue(0, 300, self.PEEPMinSlider.minimum(), self.PEEPMinSlider.maximum(), self.PEEPMinSlider.value())
+        self.PEEPMinSlider.setMask(QRegion(0, ymask, 70, 30))
+        # Adjust acompanying label
+        self.lblPEEPMin.setText(floatToStr(newval,0))
+        ypos = AlarmSettings.pixelPosFromValue(85, 385, self.PEEPMinSlider.minimum(), self.PEEPMinSlider.maximum(), self.PEEPMinSlider.value())
+        self.lblPEEPMin.setGeometry(670,ypos,50,20)
+
+    # When the PEEP Max alarm setting is changed, this slot responds and updates the appropriate flag
     @pyqtSlot(int)
     def changePEEPMax(self, newval):
+        # Don't let this cross the other PEEP slider - note that the setValue() call will trigger another call to this slot, hence the return statement
+        if newval < self.PEEPMinSlider.value():
+            self.PEEPMaxSlider.setValue(self.PEEPMinSlider.value())
+            return
         # If this is the first time the value has been changed
         if not self.PEEPMaxChanged:
             self.PEEPMaxChanged = True
@@ -590,7 +626,7 @@ class AlarmSettings(QtWidgets.QDialog):
         # Adjust acompanying label
         self.lblPEEPMax.setText(floatToStr(newval,0))
         ypos = AlarmSettings.pixelPosFromValue(55, 355, self.PEEPMaxSlider.minimum(), self.PEEPMaxSlider.maximum(), self.PEEPMaxSlider.value())
-        self.lblPEEPMax.setGeometry(670,ypos,40,20)
+        self.lblPEEPMax.setGeometry(670,ypos,50,20)
 
     # When the VteMin alarm setting is changed, this slot responds and updates the appropriate flag
     @pyqtSlot(int)
@@ -642,7 +678,8 @@ class AlarmSettings(QtWidgets.QDialog):
         if self.pPeakChanged:
             self.mainWin.pPeakMaxAlarm = self.pPeakSlider.value()
             self.mainWin.pPeakAlarmSet = True
-        if  self.PEEPMaxChanged:
+        if  self.PEEPMinChanged or self.PEEPMaxChanged:
+            self.mainWin.PEEPMinAlarm = self.PEEPMinSlider.value()
             self.mainWin.PEEPMaxAlarm = self.PEEPMaxSlider.value()
             self.mainWin.PEEPAlarmSet = True
         if  self.vteMinChanged or self.vteMaxChanged:
@@ -666,19 +703,25 @@ class AlarmSettings(QtWidgets.QDialog):
         self.PEEPMaxSlider.setStyleSheet(AlarmSettings.sliderMaxNotSetStyle)
         self.lblPEEPMax.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
         self.PEEPMaxChanged = False
-        # VteMin
-        self.vteMinSlider.setValue(self.mainWin.vteMinAlarm)
-        self.vteMinSlider.setStyleSheet(AlarmSettings.sliderMinNotSetStyle)
-        self.lblVteMin.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
-        self.vteMinChanged = False
+        # PEEPMin
+        self.PEEPMinSlider.setValue(self.mainWin.PEEPMinAlarm)
+        self.PEEPMinSlider.setStyleSheet(AlarmSettings.sliderMinNotSetStyle)
+        self.lblPEEPMin.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
+        self.PEEPMinChanged = False
         # VteMax
         self.vteMaxSlider.setValue(self.mainWin.vteMaxAlarm)
         self.vteMaxSlider.setStyleSheet(AlarmSettings.sliderMaxNotSetStyle)
         self.lblVteMax.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
         self.vteMaxChanged = False
+        # VteMin
+        self.vteMinSlider.setValue(self.mainWin.vteMinAlarm)
+        self.vteMinSlider.setStyleSheet(AlarmSettings.sliderMinNotSetStyle)
+        self.lblVteMin.setStyleSheet("QLabel {color: white;}") # label becomes white on coloured background
+        self.vteMinChanged = False
         # Confirm & Cancel buttons
         self.btnCancel.setEnabled(False)
         self.btnConfirm.setEnabled(False)
+
 
     # Given pixel min and max values, and slider min and max values, and the current value, return its pixel position
     # Note order of maxPix, minPix: this is because of orientation of my sliders

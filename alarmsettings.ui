@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ui version="4.0"> 
+<ui version="4.0">
  <class>Dialog</class>
  <widget class="QDialog" name="Dialog">
   <property name="windowModality">
@@ -929,7 +929,7 @@
      <x>360</x>
      <y>10</y>
      <width>100</width>
-     <height>33</height>
+     <height>41</height>
     </rect>
    </property>
    <property name="palette">
@@ -1063,6 +1063,46 @@
     <enum>Qt::Vertical</enum>
    </property>
   </widget>
+  <widget class="QSlider" name="PEEPMinSlider">
+   <property name="geometry">
+    <rect>
+     <x>655</x>
+     <y>80</y>
+     <width>70</width>
+     <height>330</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>50</number>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Vertical</enum>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lblPEEPMin">
+   <property name="geometry">
+    <rect>
+     <x>670</x>
+     <y>330</y>
+     <width>50</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+    </font>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>10</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
   <zorder>vteMinSlider</zorder>
   <zorder>vteMaxSlider</zorder>
   <zorder>pPeakSlider</zorder>
@@ -1091,6 +1131,8 @@
   <zorder>lblVte</zorder>
   <zorder>lblVteMax</zorder>
   <zorder>lblVteMin</zorder>
+  <zorder>PEEPMinSlider</zorder>
+  <zorder>lblPEEPMin</zorder>
  </widget>
  <resources/>
  <connections/>
